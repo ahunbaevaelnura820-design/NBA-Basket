@@ -1,0 +1,1123 @@
+```html
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBA Basket Game</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      color: white;
+      background: radial-gradient(circle at top, #263f78, #0b1020 70%);
+    }
+
+    .app {
+      width: min(96vw, 1000px);
+      padding: 16px 0 25px;
+    }
+
+    #hud {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 0 6px 12px;
+    }
+
+    .player {
+      min-width: 0;
+      color: #bfcdf0;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .player.right {
+      text-align: right;
+    }
+
+    .score {
+      display: block;
+      color: white;
+      font-size: 34px;
+      line-height: 34px;
+    }
+
+    #middle {
+      min-width: 130px;
+      text-align: center;
+    }
+
+    #clock {
+      display: block;
+      font-size: 26px;
+      font-weight: bold;
+    }
+
+    #info {
+      color: #bfcdf0;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .court {
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #607ab2;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px #000a;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    #menu {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: #050914d9;
+      backdrop-filter: blur(6px);
+    }
+
+    #menu.hidden {
+      display: none;
+    }
+
+    .menu-box {
+      width: min(100%, 650px);
+      max-height: 100%;
+      overflow: auto;
+      padding: 25px;
+      border: 1px solid #617eb8;
+      border-radius: 18px;
+      background: #142143;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+    }
+
+    .subtitle,
+    .rules {
+      color: #bdcbed;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .modes,
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    button,
+    select {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px;
+      font: inherit;
+      font-weight: bold;
+    }
+
+    button {
+      cursor: pointer;
+      color: #101626;
+      background: #ffd15a;
+    }
+
+    .mode {
+      color: #dce7ff;
+      background: #0c1530;
+      border: 1px solid #526c9e;
+    }
+
+    .mode.active {
+      color: #101626;
+      background: #ffd15a;
+      border-color: #ffd15a;
+    }
+
+    select {
+      color: white;
+      background: #0c1530;
+      border: 1px solid #526c9e;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: #dce7ff;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .hidden-field {
+      display: none;
+    }
+
+    #levelText {
+      margin: 3px 0 0;
+      color: #ffd15a;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .toolbar button:last-child {
+      color: white;
+      background: #26395d;
+    }
+
+    @media (max-width: 560px) {
+      .fields,
+      .modes {
+        grid-template-columns: 1fr;
+      }
+
+      #middle {
+        min-width: 90px;
+      }
+
+      .score {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section id="hud">
+      <div class="player">
+        <span id="p1name">ИГРОК 1</span>
+        <strong class="score" id="p1score">0</strong>
+      </div>
+
+      <div id="middle">
+        <strong id="clock">00:00</strong>
+        <span id="info">ВЫБЕРИ РЕЖИМ</span>
+      </div>
+
+      <div class="player right">
+        <span id="p2name">ИГРОК 2</span>
+        <strong class="score" id="p2score">0</strong>
+      </div>
+    </section>
+
+    <section class="court">
+      <canvas id="game" width="900" height="560"></canvas>
+
+      <div id="menu">
+        <div class="menu-box" id="menuBox">
+          <h1>🏀 NBA BASKET GAME</h1>
+          <p class="subtitle" id="subtitle">Выбери количество игроков</p>
+
+          <div class="modes">
+            <button class="mode active" id="onePlayer">1 ИГРОК</button>
+            <button class="mode" id="twoPlayers">2 ИГРОКА</button>
+          </div>
+
+          <div class="fields">
+            <label>
+              КОМАНДА ИГРОКА 1
+              <select id="team1"></select>
+            </label>
+
+            <label id="team2Box">
+              КОМАНДА ИГРОКА 2
+              <select id="team2"></select>
+            </label>
+
+            <label id="levelBox">
+              УРОВЕНЬ
+              <select id="level"></select>
+              <span id="levelText"></span>
+            </label>
+
+            <label>
+              КОЛЬЦО
+              <select id="motion">
+                <option value="moving">Движущееся</option>
+                <option value="still">Неподвижное</option>
+              </select>
+            </label>
+
+            <label>
+              СКОРОСТЬ ИГРЫ
+              <select id="speed">
+                <option value="0.75">Медленно</option>
+                <option value="1" selected>Обычно</option>
+                <option value="1.3">Быстро</option>
+              </select>
+            </label>
+
+            <label>
+              ЗВУК
+              <select id="sound">
+                <option value="on" selected>Включён</option>
+                <option value="off">Выключен</option>
+              </select>
+            </label>
+          </div>
+
+          <button id="start" style="margin-top:18px">НАЧАТЬ ИГРУ</button>
+
+          <p class="rules" id="rules">
+            Потяни мяч мышью или пальцем в сторону броска и отпусти.
+            Очки начисляются только после прохождения мяча через кольцо и сетку сверху вниз.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <button id="newGame">Новая игра</button>
+      <button id="settings">Меню и настройки</button>
+    </div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const FLOOR = 485;
+
+    const el = {
+      menu: document.getElementById("menu"),
+      one: document.getElementById("onePlayer"),
+      two: document.getElementById("twoPlayers"),
+      subtitle: document.getElementById("subtitle"),
+      rules: document.getElementById("rules"),
+      team1: document.getElementById("team1"),
+      team2: document.getElementById("team2"),
+      team2Box: document.getElementById("team2Box"),
+      level: document.getElementById("level"),
+      levelBox: document.getElementById("levelBox"),
+      levelText: document.getElementById("levelText"),
+      motion: document.getElementById("motion"),
+      speed: document.getElementById("speed"),
+      sound: document.getElementById("sound"),
+      start: document.getElementById("start"),
+      newGame: document.getElementById("newGame"),
+      settings: document.getElementById("settings"),
+      p1name: document.getElementById("p1name"),
+      p2name: document.getElementById("p2name"),
+      p1score: document.getElementById("p1score"),
+      p2score: document.getElementById("p2score"),
+      clock: document.getElementById("clock"),
+      info: document.getElementById("info")
+    };
+
+    const teams = [
+      "Atlanta Hawks", "Boston Celtics", "Brooklyn Nets",
+      "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers",
+      "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons",
+      "Golden State Warriors", "Houston Rockets", "Indiana Pacers",
+      "LA Clippers", "Los Angeles Lakers", "Memphis Grizzlies",
+      "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves",
+      "New Orleans Pelicans", "New York Knicks",
+      "Oklahoma City Thunder", "Orlando Magic",
+      "Philadelphia 76ers", "Phoenix Suns",
+      "Portland Trail Blazers", "Sacramento Kings",
+      "San Antonio Spurs", "Toronto Raptors",
+      "Utah Jazz", "Washington Wizards"
+    ];
+
+    teams.forEach((name, index) => {
+      const a = new Option(name, name);
+      const b = new Option(name, name);
+
+      if (name === "Los Angeles Lakers") a.selected = true;
+      if (name === "Boston Celtics") b.selected = true;
+
+      el.team1.add(a);
+      el.team2.add(b);
+    });
+
+    for (let i = 1; i <= 100; i++) {
+      el.level.add(new Option(`Уровень ${i}`, i));
+    }
+
+    const G = {
+      mode: 1,
+      level: 1,
+      goal: 1,
+      moving: true,
+      speed: 1,
+      sound: true,
+      run: false,
+      turn: 0,
+      scores: [0, 0],
+      time: 0,
+      elapsed: 0,
+      last: 0,
+      hoops: [],
+      ball: null,
+      aiming: false,
+      pointer: { x: 0, y: 0 },
+      wait: 0,
+      advance: false,
+      message: "",
+      animation: 0
+    };
+
+    let audio = null;
+
+    function beep(freq, time = 0.08) {
+      if (!G.sound) return;
+
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+
+      if (!audio) audio = new AudioContext();
+      if (audio.state === "suspended") audio.resume();
+
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+
+      oscillator.frequency.value = freq;
+      gain.gain.value = 0.04;
+
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+
+      oscillator.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + time);
+      oscillator.stop(audio.currentTime + time);
+    }
+
+    function difficulty(level) {
+      if (level <= 20) return "ЛЁГКО";
+      if (level <= 40) return "СРЕДНЕ";
+      if (level <= 60) return "СЛОЖНО";
+      if (level <= 80) return "ЭКСПЕРТ";
+      return "ЛЕГЕНДА";
+    }
+
+    function updateLevelText() {
+      const level = Number(el.level.value);
+      const goal = 1 + Math.floor((level - 1) / 20);
+
+      el.levelText.textContent =
+        `${difficulty(level)} · цель: ${goal} попаданий`;
+    }
+
+    function selectMode(mode) {
+      G.mode = mode;
+
+      const single = mode === 1;
+
+      el.one.classList.toggle("active", single);
+      el.two.classList.toggle("active", !single);
+
+      el.team2Box.classList.toggle("hidden-field", single);
+      el.levelBox.classList.toggle("hidden-field", !single);
+
+      el.subtitle.textContent = single
+        ? "Одиночный режим: 100 уровней"
+        : "Режим для двух игроков";
+
+      el.rules.textContent = single
+        ? "Выбирай уровень от 1 до 100. На высоких уровнях кольцо становится меньше, быстрее и цель сложнее."
+        : "После каждого броска ход переходит другому игроку.";
+    }
+
+    function makeHoops() {
+      const level = G.mode === 1 ? G.level : 1;
+      const half = G.mode === 1 ? 38 - Math.floor((level - 1) / 18) : 37;
+      const range = G.moving ? (G.mode === 1 ? Math.min(65, 15 + level * 0.45) : 42) : 0;
+      const rate = G.mode === 1 ? 0.8 + level * 0.012 : 1.2;
+
+      const right = {
+        id: "right",
+        baseX: 735,
+        x: 735,
+        y: 185,
+        half,
+        range,
+        rate,
+        phase: Math.PI
+      };
+
+      if (G.mode === 1) return [right];
+
+      return [
+        {
+          id: "left",
+          baseX: 165,
+          x: 165,
+          y: 185,
+          half,
+          range,
+          rate,
+          phase: 0
+        },
+        right
+      ];
+    }
+
+    function playerPosition(index) {
+      return index === 0
+        ? { x: 160, hand: 220 }
+        : { x: 740, hand: 680 };
+    }
+
+    function resetBall() {
+      const p = playerPosition(G.turn);
+
+      G.ball = {
+        x: p.hand,
+        y: 360,
+        px: p.hand,
+        py: 360,
+        r: 16,
+        vx: 0,
+        vy: 0,
+        fly: false,
+        age: 0,
+        floorHits: 0,
+        target: G.mode === 1 || G.turn === 0 ? "right" : "left",
+        entered: false
+      };
+
+      G.aiming = false;
+    }
+
+    function startGame() {
+      G.speed = Number(el.speed.value);
+      G.sound = el.sound.value === "on";
+      G.moving = el.motion.value === "moving";
+      G.level = Number(el.level.value);
+      G.goal = 1 + Math.floor((G.level - 1) / 20);
+
+      G.turn = 0;
+      G.scores = [0, 0];
+      G.elapsed = 0;
+      G.wait = 0;
+      G.advance = false;
+      G.message = "";
+      G.time = G.mode === 1 ? Math.max(38, 54 - G.level * 0.16) : 90;
+      G.hoops = makeHoops();
+      G.run = true;
+
+      resetBall();
+      updateHud();
+
+      el.menu.classList.add("hidden");
+
+      cancelAnimationFrame(G.animation);
+      G.last = performance.now();
+      G.animation = requestAnimationFrame(loop);
+    }
+
+    function openMenu() {
+      G.run = false;
+      G.aiming = false;
+      updateHud();
+      el.menu.classList.remove("hidden");
+    }
+
+    function updateHud() {
+      el.p1name.textContent = G.mode === 1
+        ? `ИГРОК · ${el.team1.value}`
+        : `ИГРОК 1 · ${el.team1.value}`;
+
+      el.p1score.textContent = G.scores[0];
+
+      if (G.mode === 1) {
+        el.p2name.textContent = "УРОВЕНЬ";
+        el.p2score.textContent = `${G.level}/100`;
+        el.info.textContent = G.run
+          ? `${difficulty(G.level)} · ЦЕЛЬ ${G.goal}`
+          : "НАСТРОЙКА ИГРЫ";
+      } else {
+        el.p2name.textContent = `ИГРОК 2 · ${el.team2.value}`;
+        el.p2score.textContent = G.scores[1];
+        el.info.textContent = G.run
+          ? `ХОД: ИГРОК ${G.turn + 1}`
+          : "НАСТРОЙКА ИГРЫ";
+      }
+
+      const min = Math.floor(G.time / 60).toString().padStart(2, "0");
+      const sec = Math.ceil(G.time % 60).toString().padStart(2, "0");
+
+      el.clock.textContent = `${min}:${sec}`;
+    }
+
+    function board(h) {
+      return h.id === "right"
+        ? { x: h.x + h.half + 15, y: h.y - 65, w: 13, h: 92 }
+        : { x: h.x - h.half - 28, y: h.y - 65, w: 13, h: 92 };
+    }
+
+    function drawCourt() {
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+
+      bg.addColorStop(0, "#19335b");
+      bg.addColorStop(0.48, "#85b5de");
+      bg.addColorStop(0.49, "#d98a45");
+      bg.addColorStop(1, "#a34d28");
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = "#ffffff18";
+
+      for (let x = 30; x < W; x += 130) {
+        ctx.fillRect(x, 0, 5, 260);
+      }
+
+      ctx.fillStyle = "#93451f";
+      ctx.fillRect(0, FLOOR, W, H - FLOOR);
+
+      ctx.strokeStyle = "#f9d5a6aa";
+      ctx.lineWidth = 4;
+
+      ctx.beginPath();
+      ctx.moveTo(0, FLOOR);
+      ctx.lineTo(W, FLOOR);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(W / 2, FLOOR, 112, Math.PI, 0);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(W / 2, FLOOR);
+      ctx.lineTo(W / 2, H);
+      ctx.stroke();
+    }
+
+    function drawPlayer(index) {
+      const p = playerPosition(index);
+      const color = index === 0 ? "#4d75d7" : "#d94a4a";
+      const face = index === 0 ? 1 : -1;
+
+      ctx.save();
+
+      ctx.strokeStyle = "#20222b";
+      ctx.lineWidth = 10;
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(p.x - 12, 450);
+      ctx.lineTo(p.x - 20, FLOOR - 5);
+      ctx.moveTo(p.x + 12, 450);
+      ctx.lineTo(p.x + 20, FLOOR - 5);
+      ctx.stroke();
+
+      ctx.fillStyle = "#d28a5c";
+      ctx.beginPath();
+      ctx.arc(p.x, 380, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#281c19";
+      ctx.beginPath();
+      ctx.arc(p.x, 370, 22, Math.PI, 0);
+      ctx.fill();
+
+      ctx.fillStyle = color;
+      ctx.fillRect(p.x - 25, 402, 50, 52);
+
+      ctx.fillStyle = "white";
+      ctx.font = "bold 18px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(index + 1, p.x, 434);
+
+      ctx.strokeStyle = "#d28a5c";
+      ctx.lineWidth = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(p.x + face * 24, 414);
+      ctx.lineTo(p.hand, 366);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawHoop(h) {
+      const left = h.x - h.half;
+      const right = h.x + h.half;
+      const b = board(h);
+
+      ctx.fillStyle = "#a6b8ce";
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+      ctx.strokeStyle = "#ef5139";
+      ctx.lineWidth = 8;
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(left, h.y);
+      ctx.lineTo(right, h.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#f4f4ec";
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < 6; i++) {
+        const top = left + i * (h.half * 2 / 5);
+        const bottom = h.x - h.half * 0.58 + i * (h.half * 1.16 / 5);
+
+        ctx.beginPath();
+        ctx.moveTo(top, h.y + 4);
+        ctx.lineTo(bottom, h.y + 46);
+        ctx.stroke();
+      }
+
+      for (let y = 14; y < 45; y += 12) {
+        ctx.beginPath();
+        ctx.moveTo(left + h.half * 0.25, h.y + y);
+        ctx.lineTo(right - h.half * 0.25, h.y + y);
+        ctx.stroke();
+      }
+    }
+
+    function drawBall() {
+      const b = G.ball;
+      if (!b) return;
+
+      const grad = ctx.createRadialGradient(
+        b.x - 5,
+        b.y - 7,
+        2,
+        b.x,
+        b.y,
+        b.r
+      );
+
+      grad.addColorStop(0, "#ffd083");
+      grad.addColorStop(0.35, "#ee8530");
+      grad.addColorStop(1, "#9b3818");
+
+      ctx.fillStyle = grad;
+
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#482317";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r - 1, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(b.x - b.r, b.y);
+      ctx.quadraticCurveTo(b.x, b.y - 4, b.x + b.r, b.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y - b.r);
+      ctx.quadraticCurveTo(b.x - 6, b.y, b.x, b.y + b.r);
+      ctx.stroke();
+    }
+
+    function drawAim() {
+      const b = G.ball;
+
+      if (!G.aiming || b.fly) return;
+
+      const dx = G.pointer.x - b.x;
+      const dy = G.pointer.y - b.y;
+      const distance = Math.min(185, Math.hypot(dx, dy));
+      const angle = Math.atan2(dy, dx);
+
+      ctx.save();
+
+      ctx.strokeStyle = "#fff2a6";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([9, 6]);
+
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(
+        b.x + Math.cos(angle) * distance,
+        b.y + Math.sin(angle) * distance
+      );
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawMessage() {
+      if (!G.message) return;
+
+      ctx.save();
+
+      ctx.textAlign = "center";
+      ctx.font = "bold 35px Arial";
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = "#1d0f08";
+      ctx.fillStyle = "#fff1a0";
+
+      ctx.strokeText(G.message, W / 2, 95);
+      ctx.fillText(G.message, W / 2, 95);
+
+      ctx.restore();
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function hitRectangle(ball, r) {
+      const nx = clamp(ball.x, r.x, r.x + r.w);
+      const ny = clamp(ball.y, r.y, r.y + r.h);
+
+      let dx = ball.x - nx;
+      let dy = ball.y - ny;
+      let d = Math.hypot(dx, dy);
+
+      if (d >= ball.r) return false;
+
+      if (d === 0) {
+        dx = ball.vx > 0 ? -1 : 1;
+        dy = 0;
+        d = 1;
+      }
+
+      const x = dx / d;
+      const y = dy / d;
+      const overlap = ball.r - d;
+
+      ball.x += x * overlap;
+      ball.y += y * overlap;
+
+      const toward = ball.vx * x + ball.vy * y;
+
+      if (toward < 0) {
+        ball.vx -= 1.7 * toward * x;
+        ball.vy -= 1.7 * toward * y;
+      }
+
+      return true;
+    }
+
+    function hitRim(ball, x, y) {
+      const dx = ball.x - x;
+      const dy = ball.y - y;
+      const d = Math.hypot(dx, dy);
+      const total = ball.r + 5;
+
+      if (!d || d >= total) return false;
+
+      const nx = dx / d;
+      const ny = dy / d;
+
+      ball.x += nx * (total - d);
+      ball.y += ny * (total - d);
+
+      const toward = ball.vx * nx + ball.vy * ny;
+
+      if (toward < 0) {
+        ball.vx -= 1.6 * toward * nx;
+        ball.vy -= 1.6 * toward * ny;
+      }
+
+      return true;
+    }
+
+    function finish(text, delay = 0.7) {
+      if (G.wait > 0) return;
+
+      G.ball.fly = false;
+      G.wait = delay;
+      G.message = text;
+    }
+
+    function checkScore(h) {
+      const b = G.ball;
+
+      if (b.target !== h.id || b.vy <= 0) return;
+
+      const left = h.x - h.half;
+      const right = h.x + h.half;
+
+      const insideRing =
+        b.x > left + b.r * 0.8 &&
+        b.x < right - b.r * 0.8;
+
+      if (!b.entered && b.py < h.y && b.y >= h.y && insideRing) {
+        b.entered = true;
+      }
+
+      const netLine = h.y + 31;
+
+      const insideNet =
+        b.x > left + h.half * 0.35 &&
+        b.x < right - h.half * 0.35;
+
+      if (
+        b.entered &&
+        b.py < netLine &&
+        b.y >= netLine &&
+        insideNet
+      ) {
+        G.scores[G.turn] += 2;
+        beep(650, 0.12);
+
+        const completed =
+          G.mode === 1 &&
+          G.scores[0] / 2 >= G.goal;
+
+        G.advance = completed;
+
+        finish(
+          completed
+            ? (G.level === 100
+              ? "УРОВЕНЬ 100 ПРОЙДЕН!"
+              : `УРОВЕНЬ ${G.level} ПРОЙДЕН!`)
+            : "СЕТКА! +2",
+          completed ? 1.1 : 0.8
+        );
+
+        updateHud();
+      }
+    }
+
+    function simulate(step) {
+      const b = G.ball;
+
+      b.px = b.x;
+      b.py = b.y;
+      b.age += step;
+
+      b.vy += 0.3 * step;
+      b.x += b.vx * step;
+      b.y += b.vy * step;
+
+      for (const h of G.hoops) {
+        const boardHit = hitRectangle(b, board(h));
+
+        const rimHit =
+          hitRim(b, h.x - h.half, h.y) ||
+          hitRim(b, h.x + h.half, h.y);
+
+        if (boardHit || rimHit) beep(90, 0.04);
+
+        checkScore(h);
+      }
+
+      if (!b.fly) return;
+
+      if (b.y + b.r >= FLOOR) {
+        b.y = FLOOR - b.r;
+        b.vy = -Math.abs(b.vy) * 0.54;
+        b.vx *= 0.78;
+        b.floorHits++;
+
+        if (b.floorHits > 2 || Math.abs(b.vy) < 1.5) {
+          finish("ПРОМАХ");
+        }
+      }
+
+      if (
+        b.x < -60 ||
+        b.x > W + 60 ||
+        b.y > H + 60 ||
+        b.age > 520
+      ) {
+        finish("ПРОМАХ");
+      }
+    }
+
+    function afterShot() {
+      if (G.mode === 1) {
+        if (G.advance) {
+          if (G.level >= 100) {
+            G.run = false;
+            G.message = "100 УРОВНЕЙ ПРОЙДЕНО!";
+            updateHud();
+            return;
+          }
+
+          G.level++;
+          G.goal = 1 + Math.floor((G.level - 1) / 20);
+          G.scores = [0, 0];
+          G.time = Math.max(38, 54 - G.level * 0.16);
+          G.hoops = makeHoops();
+        }
+
+        G.advance = false;
+        G.message = "";
+        resetBall();
+        updateHud();
+        return;
+      }
+
+      G.turn = G.turn === 0 ? 1 : 0;
+      G.message = "";
+      resetBall();
+      updateHud();
+    }
+
+    function update(dt) {
+      const step = dt * G.speed;
+
+      G.elapsed += step / 60;
+      G.time = Math.max(0, G.time - step / 60);
+
+      for (const h of G.hoops) {
+        h.x = h.baseX + Math.sin(G.elapsed * h.rate + h.phase) * h.range;
+      }
+
+      if (G.wait > 0) {
+        G.wait -= dt / 60;
+
+        if (G.wait <= 0) {
+          G.wait = 0;
+          afterShot();
+        }
+      } else if (G.ball.fly) {
+        const parts = Math.max(1, Math.ceil(step));
+
+        for (let i = 0; i < parts && G.ball.fly; i++) {
+          simulate(step / parts);
+        }
+      }
+
+      if (G.time <= 0) {
+        G.run = false;
+        G.ball.fly = false;
+
+        G.message = G.mode === 1
+          ? `УРОВЕНЬ ${G.level}: ПОПРОБУЙ ЕЩЁ`
+          : (G.scores[0] === G.scores[1]
+            ? "НИЧЬЯ!"
+            : `ПОБЕДИЛ ИГРОК ${G.scores[0] > G.scores[1] ? 1 : 2}`);
+      }
+
+      updateHud();
+    }
+
+    function render() {
+      drawCourt();
+
+      G.hoops.forEach(drawHoop);
+
+      drawPlayer(0);
+
+      if (G.mode === 2) {
+        drawPlayer(1);
+      }
+
+      drawAim();
+      drawBall();
+      drawMessage();
+    }
+
+    function loop(now) {
+      const dt = Math.min((now - G.last) / 16.67, 2);
+      G.last = now;
+
+      if (G.run) update(dt);
+
+      render();
+      G.animation = requestAnimationFrame(loop);
+    }
+
+    function point(event) {
+      const r = canvas.getBoundingClientRect();
+
+      return {
+        x: (event.clientX - r.left) * W / r.width,
+        y: (event.clientY - r.top) * H / r.height
+      };
+    }
+
+    canvas.addEventListener("pointerdown", (event) => {
+      if (!G.run || G.ball.fly || G.wait > 0) return;
+
+      const p = point(event);
+
+      if (Math.hypot(p.x - G.ball.x, p.y - G.ball.y) < 65) {
+        G.aiming = true;
+        G.pointer = p;
+        canvas.setPointerCapture(event.pointerId);
+      }
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (G.aiming) {
+        G.pointer = point(event);
+      }
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      if (!G.aiming || !G.run) return;
+
+      const p = point(event);
+      const b = G.ball;
+
+      const dx = p.x - b.x;
+      const dy = p.y - b.y;
+      const length = Math.hypot(dx, dy);
+
+      if (length > 15) {
+        const power = Math.min(length, 220) * 0.105;
+
+        b.vx = dx / length * power;
+        b.vy = dy / length * power;
+        b.fly = true;
+
+        beep(150, 0.08);
+      }
+
+      G.aiming = false;
+    });
+
+    canvas.addEventListener("pointercancel", () => {
+      G.aiming = false;
+    });
+
+    el.one.addEventListener("click", () => selectMode(1));
+    el.two.addEventListener("click", () => selectMode(2));
+    el.level.addEventListener("change", updateLevelText);
+
+    el.start.addEventListener("click", startGame);
+    el.newGame.addEventListener("click", startGame);
+    el.settings.addEventListener("click", openMenu);
+
+    selectMode(1);
+    updateLevelText();
+
+    G.hoops = makeHoops();
+    resetBall();
+    updateHud();
+    render();
+  </script>
+</body>
+</html>
+```
